@@ -1,162 +1,140 @@
-# The Unofficial Guide — Project 1
+# 🏠 The Unofficial Guide — GMU Off-Campus Housing (RAG)
 
-> **How to use this template:**
-> Complete each section *after* you've built and tested the corresponding part of your system.
-> Do not write placeholder text — if a section isn't done yet, leave it blank and come back.
-> Every section below is required for submission. One-liners will not receive full credit.
+A Retrieval-Augmented Generation system that answers plain-language questions about
+**off-campus housing near George Mason University** using real tenant reviews and
+listings — with **grounded, cited answers** and a refusal to guess when the sources
+don't cover the question.
+
+> 🔗 **Live demo:** _added after deployment to Streamlit Community Cloud_
+> 📸 _Screenshot/GIF: add `docs/demo.gif` and embed here_
+
+Ask *"Which complexes near GMU have pest problems?"* and get:
+> Layton Hall [1] (cockroaches, mice, bedbugs) and Oakton Park [2] ("absolutely infested with German cockroaches"). — with the source reviews one click away.
+
+---
+
+## What it does
+
+- **Ingests** 10 documents of GMU housing knowledge (tenant reviews + listings) from `documents/`.
+- **Chunks** them sentence-aware and **embeds** them locally (all-MiniLM-L6-v2).
+- **Retrieves** with a **hybrid** of semantic search (ChromaDB) + keyword search (BM25), fused via Reciprocal Rank Fusion.
+- **Generates** an answer with **Groq llama-3.3-70b** that is grounded only in the retrieved chunks and **cites its sources**.
+- Serves it through a **Streamlit** web UI with an expandable Sources panel.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A["Ingestion<br/>documents/*.txt<br/>(ingest.py)"]
+    --> B["Chunking<br/>sentence-aware<br/>300 / 50 (chunk.py)"]
+    --> C["Embedding + Vector Store<br/>all-MiniLM-L6-v2 → ChromaDB<br/>(index.py)"]
+    --> D["Retrieval<br/>semantic + BM25 (RRF)<br/>(rag.py)"]
+    --> E["Generation<br/>Groq llama-3.3-70b<br/>grounded + cited (rag.py)"]
+    --> F["Streamlit UI<br/>(app.py)"]
+```
+
+## Quickstart (local)
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env          # then put your free Groq key (console.groq.com) in .env
+
+python index.py               # build the vector store (downloads the embedding model once)
+python rag.py "which complexes have cockroaches?" --answer   # CLI
+python evaluate.py            # run the evaluation report
+streamlit run app.py          # web UI
+```
 
 ---
 
 ## Domain
 
-<!-- What topic or category of knowledge does your system cover?
-     Why is this knowledge valuable, and why is it hard to find through official channels?
-     Example: "Student reviews of CS professors at [university] — useful because official
-     course descriptions don't reflect teaching style, exam difficulty, or workload." -->
+**Off-campus housing for George Mason University students (Fairfax, VA).**
 
----
+When a GMU student looks for an apartment, the *official* sources — property websites, the GMU off-campus portal, listing aggregators — tell you rent, floor plans, and amenities. What they don't tell you is what living there is actually like: whether a building has a cockroach problem, whether management ignores maintenance tickets, whether the walls are paper-thin, or whether "visitor parking" really exists. That experiential knowledge is buried across thousands of scattered tenant reviews and Reddit threads. This system makes that tenant-generated knowledge searchable and answerable, with citations.
 
 ## Document Sources
 
-<!-- List every source you collected documents from.
-     Be specific: include URLs, subreddit names, forum thread titles, or file names.
-     Aim for variety — sources that together cover different subtopics or perspectives. -->
+10 documents spanning lived experience (tenant reviews) and logistics (listings/commute). Reddit and several review sites (ApartmentRatings, Yelp, apartments.com) block automated access, so the review documents were **compiled from review content indexed via web search**, with the underlying source URLs recorded in each file's header (`SOURCE:` line).
 
 | # | Source | Type | URL or file path |
-|---|--------|------|-----------------|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
-| 4 | | | |
-| 5 | | | |
-| 6 | | | |
-| 7 | | | |
-| 8 | | | |
-| 9 | | | |
-| 10 | | | |
-
----
+|---|--------|------|------------------|
+| 1 | ApartmentList — rent ranges near GMU | Factual listing | `documents/factual_apartmentlist_near_gmu.txt` · apartmentlist.com |
+| 2 | GMU Off-Campus Housing portal | Factual listing | `documents/factual_gmu_och_listings.txt` · och.gmu.edu |
+| 3 | Masonvale tenant reviews | Tenant reviews | `documents/review_masonvale.txt` · Yelp/Birdeye |
+| 4 | Fairfax Square tenant reviews | Tenant reviews | `documents/review_fairfax_square.txt` · ApartmentRatings/Birdeye |
+| 5 | Oakton Park tenant reviews | Tenant reviews | `documents/review_oakton_park.txt` · ApartmentRatings/Birdeye |
+| 6 | The Point at Fairfax tenant reviews | Tenant reviews | `documents/review_the_point_at_fairfax.txt` · ApartmentRatings/Yelp |
+| 7 | Layton Hall tenant reviews | Tenant reviews | `documents/review_layton_hall.txt` · ApartmentRatings/Yelp |
+| 8 | eaves Fairfax City tenant reviews | Tenant reviews | `documents/review_eaves_fairfax_city.txt` · Birdeye/VeryApt |
+| 9 | Flats & Main on University | Student housing (factual) | `documents/factual_flats_main_on_university.txt` |
+| 10 | Commute & neighborhoods guide | Guide | `documents/guide_commute_neighborhoods_gmu.txt` |
 
 ## Chunking Strategy
 
-<!-- Describe your chunking approach with enough specificity that someone else could reproduce it.
-     Include:
-     - Chunk size (characters or tokens) and why that size fits your documents
-     - Overlap size and why (or why not) you used overlap
-     - Any preprocessing you did before chunking (e.g., stripping HTML, removing headers)
-     - What your final chunk count was across all documents -->
+**Chunk size:** 300 characters (≈ 50–70 tokens)
 
-**Chunk size:**
+**Overlap:** 50 characters
 
-**Overlap:**
+**Why these choices fit your documents:** The corpus is short, opinion-based review text where each praise or complaint is 1–3 sentences ("infested with German cockroaches," "$100/month for an extra spot"). Small chunks keep each retrievable *thought* distinct, so a query about parking matches the parking sentence instead of being diluted by unrelated amenity text — following the guidance that review text warrants smaller chunks than long guides. The 50-char overlap preserves meaning across sentence boundaries. **Preprocessing:** each file's `SOURCE/TYPE/COLLECTED/TOPIC` header is parsed into metadata (not embedded as content), HTML entities/tags are stripped, and whitespace normalized (`ingest.py`). Chunking is sentence-aware — whole sentences are packed up to ~300 chars and never cut mid-word (`chunk.py`). Each chunk is **title-prefixed** before embedding (e.g. `"Fairfax Square: …"`) so it stays self-identifying even when a sentence omits the complex name.
 
-**Why these choices fit your documents:**
-
-**Final chunk count:**
-
----
+**Final chunk count:** 55 chunks across 10 documents (avg 244 chars).
 
 ## Embedding Model
 
-<!-- Name the embedding model you used and explain your choice.
-     Then answer: if you were deploying this system for real users and cost wasn't a constraint,
-     what tradeoffs would you weigh in choosing a different model?
-     Consider: context length limits, multilingual support, accuracy on domain-specific text,
-     latency, and local vs. API-hosted. -->
+**Model used:** `all-MiniLM-L6-v2` (sentence-transformers) — 384-dim, runs locally, no API key, fast.
 
-**Model used:**
-
-**Production tradeoff reflection:**
-
----
+**Production tradeoff reflection:** MiniLM is small, fast, free, and good enough for short English review text, but it has a ~256-token input cap, is English-only, and is general-domain (not tuned for housing/real-estate language). Deploying for real users with no cost constraint, I'd weigh: larger hosted models (OpenAI `text-embedding-3-large`, Cohere Embed v3, Voyage) for higher accuracy and longer context; a multilingual model if the student body is international; API latency/rate limits vs. local inference; and the privacy/cost of sending tenant data to a third-party API vs. keeping embeddings local. For this project, the local model wins on cost, privacy, and zero setup.
 
 ## Grounded Generation
 
-<!-- Explain how your system enforces grounding — how does it prevent the LLM from answering
-     beyond the retrieved documents?
-     Describe both your system prompt (what instruction you gave the model) and any structural
-     choices (e.g., how you formatted the context, whether you filtered low-relevance chunks).
-     Do not just say "I told it to use the documents" — show the actual instruction or explain
-     the mechanism. -->
+**System prompt grounding instruction** (verbatim, from `rag.py`):
 
-**System prompt grounding instruction:**
+> *You are The Unofficial Guide, a question-answering assistant for George Mason University off-campus housing. Answer ONLY using the numbered sources provided in the user message. Cite the sources you use with bracketed numbers like [1] or [2]. If the sources do not contain the answer, say you don't have that information in your sources — do not use outside knowledge and do not guess. Be concise and specific, and prefer concrete details (names, prices, specifics) from the sources.*
 
-**How source attribution is surfaced in the response:**
+Structural choices that enforce grounding: the retrieved chunks are formatted as a **numbered source list** (`[1] (Title) text…`) and passed in the user message; generation runs at low temperature (0.2). Verified behavior: asked *"is the GMU housing lottery actually random?"* (not in the corpus), the system replies *"I don't have that information in my sources."*
 
----
+**How source attribution is surfaced:** the model cites inline with `[n]`, and the Streamlit UI renders an expandable **Sources** panel listing each numbered chunk with its complex title, file, raw text, and original source URL.
 
 ## Evaluation Report
 
-<!-- Run your 5 test questions from planning.md through your system and record the results.
-     Be honest — a partially accurate or inaccurate result that you explain well is more
-     valuable than a suspiciously perfect result. -->
-
 | # | Question | Expected answer | System response (summarized) | Retrieval quality | Response accuracy |
 |---|----------|-----------------|------------------------------|-------------------|-------------------|
-| 1 | | | | | |
-| 2 | | | | | |
-| 3 | | | | | |
-| 4 | | | | | |
-| 5 | | | | | |
+| 1 | Which complexes near GMU have pest problems? | Oakton Park + Layton Hall | Named Oakton Park (German cockroaches) and Layton Hall (roaches/mice/bedbugs), plus eaves pest concern; cited | Relevant | Accurate |
+| 2 | Extra/reserved parking cost at The Point at Fairfax? | $100 / $125 per month | "$100/month additional, $125/month reserved"; cited The Point | Relevant | Accurate |
+| 3 | Average rent near GMU? | ~$2,680/month | "about $2,680 per month"; cited | Relevant | Accurate |
+| 4 | Which apartments offer free CUE bus? | Flats + Main on University | Flats + Main (and some private rooms); cited | Relevant | Accurate |
+| 5 | What do residents say about noise at eaves? | Loud past midnight, quiet hours | "beds shake," little action, quiet hours 10pm–8am; cited | Relevant | Accurate |
 
-**Retrieval quality:** Relevant / Partially relevant / Off-target  
-**Response accuracy:** Accurate / Partially accurate / Inaccurate
-
----
+All five answered accurately with citations. A **hybrid vs. semantic-only** comparison (see `evaluation_results.md`) showed hybrid retrieval staying more on-target — e.g., on Q5 hybrid returned all five chunks from eaves Fairfax City while semantic-only pulled in an unrelated Fairfax Square chunk.
 
 ## Failure Case Analysis
 
-<!-- Identify at least one question where retrieval or generation did not work as expected.
-     Write a specific explanation of *why* it failed, tied to a part of the pipeline.
+**Question that failed:** *"Is Oakton Park a good place to live?"* (an intentionally evaluative question).
 
-     "The answer was wrong" is not an explanation.
+**What the system returned:** It declined to give an overall verdict — *"I don't have … an overall assessment"* — then summarized mostly complaints (parking, noise, management) with a brief positive.
 
-     "The relevant information was split across a chunk boundary, so retrieval returned
-     only half the context — the model didn't have enough to answer correctly" is an explanation.
+**Root cause (tied to pipeline stages):** Two stages combine. (1) *Generation/prompt:* the grounding instruction restricts the answer to what's explicit in the sources and forbids outside judgment; no single chunk contains a holistic "good/bad" verdict, so the model won't synthesize one. (2) *Retrieval/data:* the retrieved chunks skew negative because the corpus has more specific negative detail than positive, and the aggregate 5-star rating (in the ApartmentList doc) wasn't retrieved for this query — so even the summary it gave was one-sided.
 
-     "The embedding model treated the professor's nickname as out-of-vocabulary and returned
-     results from an unrelated review" is an explanation. -->
-
-**Question that failed:**
-
-**What the system returned:**
-
-**Root cause (tied to a specific pipeline stage):**
-
-**What you would change to fix it:**
-
----
+**What I would change:** add a "synthesis" mode whose prompt explicitly asks the model to weigh pros *and* cons from the retrieved context; balance retrieval so both positive and negative chunks are pulled (sentiment- or source-type-aware); and make the aggregate-rating chunk retrievable for "is X good?" queries via metadata boosting.
 
 ## Spec Reflection
 
-<!-- Reflect on how planning.md shaped your implementation.
-     Answer both questions with at least 2–3 sentences each. -->
+**One way the spec helped you during implementation:** Deciding the chunking strategy in `planning.md` *before* coding gave the implementation a clear target — choosing small (300-char) sentence-aware chunks for short review text up front meant `ingest.py`/`chunk.py` were straightforward, and the 55-chunk result landed inside the predicted ~45–60 range with no rework.
 
-**One way the spec helped you during implementation:**
-
-**One way your implementation diverged from the spec, and why:**
-
----
+**One way your implementation diverged from the spec, and why:** The spec didn't anticipate that mid-document chunks would lose the complex name; during M3/M4 I added **title-prefixing before embedding/BM25** (not in the original plan) to fix retrieval. The planned failure case also diverged — I expected a one-sided over-confident answer, but the system *declined* to render a verdict, revealing a different limitation (it can't answer evaluative "is X good?" questions).
 
 ## AI Usage
 
-<!-- Describe at least 2 specific instances where you used an AI tool during this project.
-     For each: what did you give the AI as input, what did it produce, and what did you
-     change, override, or direct differently?
+> ⚠️ **Personalize this section** so it reflects *your* actual involvement and decisions — it is your honest disclosure of AI use.
 
-     "I used Claude to help me code" is not sufficient.
-     "I gave Claude my Chunking Strategy section from planning.md and asked it to implement
-     chunk_text(). It returned a function using a fixed character split. I overrode the
-     chunk size from 500 to 200 because my documents are short reviews, not long guides." -->
+**Instance 1 — Ingestion & chunking**
+- *What I gave the AI:* the Chunking Strategy section of `planning.md` plus a sample document.
+- *What it produced:* `ingest.py` (header parsing + cleaning) and `chunk.py` (sentence-aware 300/50 chunking).
+- *What I changed or overrode:* after inspecting the chunks, I directed it to **prefix each chunk's complex/title before embedding**, because mid-document chunks were losing the complex name and hurting retrieval.
 
-**Instance 1**
-
-- *What I gave the AI:*
-- *What it produced:*
-- *What I changed or overrode:*
-
-**Instance 2**
-
-- *What I gave the AI:*
-- *What it produced:*
-- *What I changed or overrode:*
+**Instance 2 — Document collection**
+- *What I gave the AI:* the domain (GMU off-campus housing) and target complexes.
+- *What it produced:* it attempted to fetch Reddit and review sites, which returned HTTP 403.
+- *What I changed or overrode:* I redirected the approach to **compile review content indexed via web search with honest provenance headers** rather than scraping, auto-fetching only the sources that allowed it (ApartmentList, GMU OCH), and leaving raw Reddit reviews for manual addition.
