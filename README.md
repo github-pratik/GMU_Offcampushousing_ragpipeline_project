@@ -99,13 +99,13 @@ Structural choices that enforce grounding: the retrieved chunks are formatted as
 
 ## Evaluation Report
 
-| # | Question | Expected answer | System response (summarized) | Retrieval quality | Response accuracy |
-|---|----------|-----------------|------------------------------|-------------------|-------------------|
-| 1 | Which complexes near GMU have pest problems? | Oakton Park + Layton Hall | Named Oakton Park (German cockroaches) and Layton Hall (roaches/mice/bedbugs), plus eaves pest concern; cited | Relevant | Accurate |
-| 2 | Extra/reserved parking cost at The Point at Fairfax? | $100 / $125 per month | "$100/month additional, $125/month reserved"; cited The Point | Relevant | Accurate |
-| 3 | Average rent near GMU? | ~$2,680/month | "about $2,680 per month"; cited | Relevant | Accurate |
-| 4 | Which apartments offer free CUE bus? | Flats + Main on University | Flats + Main (and some private rooms); cited | Relevant | Accurate |
-| 5 | What do residents say about noise at eaves? | Loud past midnight, quiet hours | "beds shake," little action, quiet hours 10pm–8am; cited | Relevant | Accurate |
+| # | Question | Expected answer | System response (summarized) | Retrieved sources (top-5) | Retrieval quality | Response accuracy |
+|---|----------|-----------------|------------------------------|---------------------------|-------------------|-------------------|
+| 1 | Which complexes near GMU have pest problems? | Oakton Park + Layton Hall | Named Oakton Park (German cockroaches) and Layton Hall (roaches/mice/bedbugs), plus eaves pest concern; cited | Oakton Park, Layton Hall, ApartmentList, eaves Fairfax City | Relevant | Accurate |
+| 2 | Extra/reserved parking cost at The Point at Fairfax? | $100 / $125 per month | "$100/month additional, $125/month reserved"; cited The Point | The Point at Fairfax, eaves Fairfax City, ApartmentList | Relevant | Accurate |
+| 3 | Average rent near GMU? | ~$2,680/month | "about $2,680 per month"; cited | Commute guide, ApartmentList, Fairfax Square, GMU OCH | Relevant | Accurate |
+| 4 | Which apartments offer free CUE bus? | Flats + Main on University | Flats + Main (and some private rooms); cited | Flats & Main on University, Commute guide, GMU OCH | Relevant | Accurate |
+| 5 | What do residents say about noise at eaves? | Loud past midnight, quiet hours | "beds shake," little action, quiet hours 10pm–8am; cited | eaves Fairfax City (all top-5) | Relevant | Accurate |
 
 All five answered accurately with citations. A **hybrid vs. semantic-only** comparison (see `evaluation_results.md`) showed hybrid retrieval staying more on-target — e.g., on Q5 hybrid returned all five chunks from eaves Fairfax City while semantic-only pulled in an unrelated Fairfax Square chunk.
 

@@ -51,6 +51,8 @@ This system makes that tenant- and student-generated knowledge **searchable and 
 
 **Production tradeoff reflection:** MiniLM is small, fast, free, and good enough for short English review text, but it has a ~256-token input cap, is English-only, and is general-domain (not tuned for housing/real-estate language). If deploying for real users with no cost constraint, I'd weigh: larger hosted models (OpenAI `text-embedding-3-large`, Cohere Embed v3, Voyage) for higher accuracy and longer context; a multilingual model if the student body is international; API latency/rate limits vs. local inference; and the privacy/cost of sending tenant data to a third-party API vs. keeping embeddings local. For this project the local model wins on cost, privacy, and zero setup.
 
+**Hybrid search (stretch feature):** Beyond semantic search, retrieval also runs a BM25 keyword search over the same chunks and fuses the two ranked lists with Reciprocal Rank Fusion (RRF), returning the top 5. Housing queries are full of proper nouns (complex names, "CUE bus," prices) that exact-match keyword search catches and embeddings sometimes miss. A `--semantic-only` toggle enables the hybrid-vs-semantic comparison reported in the evaluation.
+
 ---
 
 ## Evaluation Plan
