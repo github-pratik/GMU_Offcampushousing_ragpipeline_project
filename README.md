@@ -99,15 +99,46 @@ Structural choices that enforce grounding: the retrieved chunks are formatted as
 
 ## Evaluation Report
 
-| # | Question | Expected answer | System response (summarized) | Retrieved sources (top-5) | Retrieval quality | Response accuracy |
-|---|----------|-----------------|------------------------------|---------------------------|-------------------|-------------------|
-| 1 | Which complexes near GMU have pest problems? | Oakton Park + Layton Hall | Named Oakton Park (German cockroaches) and Layton Hall (roaches/mice/bedbugs), plus eaves pest concern; cited | Oakton Park, Layton Hall, ApartmentList, eaves Fairfax City | Relevant | Accurate |
-| 2 | Extra/reserved parking cost at The Point at Fairfax? | $100 / $125 per month | "$100/month additional, $125/month reserved"; cited The Point | The Point at Fairfax, eaves Fairfax City, ApartmentList | Relevant | Accurate |
-| 3 | Average rent near GMU? | ~$2,680/month | "about $2,680 per month"; cited | Commute guide, ApartmentList, Fairfax Square, GMU OCH | Relevant | Accurate |
-| 4 | Which apartments offer free CUE bus? | Flats + Main on University | Flats + Main (and some private rooms); cited | Flats & Main on University, Commute guide, GMU OCH | Relevant | Accurate |
-| 5 | What do residents say about noise at eaves? | Loud past midnight, quiet hours | "beds shake," little action, quiet hours 10pm–8am; cited | eaves Fairfax City (all top-5) | Relevant | Accurate |
+All 5 questions from `planning.md` were run end-to-end (`python evaluate.py`). For each: the question, the expected (ground-truth) answer, the system's **actual response** (verbatim), the chunks it retrieved, and an accuracy judgment. Full raw output is in `evaluation_results.md`.
 
-All five answered accurately with citations. A **hybrid vs. semantic-only** comparison (see `evaluation_results.md`) showed hybrid retrieval staying more on-target — e.g., on Q5 hybrid returned all five chunks from eaves Fairfax City while semantic-only pulled in an unrelated Fairfax Square chunk.
+**Q1 — Which apartment complexes near GMU have reported pest problems (cockroaches, mice, or bedbugs)?**
+- **Expected answer:** Oakton Park (German cockroaches) and Layton Hall (cockroaches, mice, bedbugs).
+- **System's actual response:**
+  > According to the sources, the following apartment complexes near GMU have reported pest problems: (1) Oakton Park [1] — German cockroaches; (2) Layton Hall [2][5] — cockroaches, mice, and bedbugs; (3) eaves Fairfax City [4] — pest-control concerns (no specific pests mentioned).
+- **Retrieved (top-5):** Oakton Park, Layton Hall, ApartmentList, eaves Fairfax City
+- **Accuracy judgment:** ✅ **Accurate**
+
+**Q2 — How much does extra or reserved parking cost at The Point at Fairfax?**
+- **Expected answer:** About $100/month for an additional space and $125/month for reserved parking.
+- **System's actual response:**
+  > According to [1], additional parking spots at The Point at Fairfax cost about $100 per month, and reserved parking costs about $125 per month. This information is also repeated in [2].
+- **Retrieved (top-5):** The Point at Fairfax, eaves Fairfax City, ApartmentList
+- **Accuracy judgment:** ✅ **Accurate**
+
+**Q3 — What is the average rent for an apartment near George Mason University?**
+- **Expected answer:** About $2,680 per month.
+- **System's actual response:**
+  > The average rent for an apartment near George Mason University is about $2,680 per month [1, 2].
+- **Retrieved (top-5):** Commute guide, ApartmentList, Fairfax Square, GMU OCH
+- **Accuracy judgment:** ✅ **Accurate**
+
+**Q4 — Which student apartments advertise free CUE bus rides to GMU?**
+- **Expected answer:** The Flats on University and The Main on University.
+- **System's actual response:**
+  > The Flats on University and The Main on University advertise free CUE bus rides to GMU [1, 2, 5].
+- **Retrieved (top-5):** Flats & Main on University, Commute guide, GMU OCH
+- **Accuracy judgment:** ✅ **Accurate**
+
+**Q5 — What do residents say about noise at eaves Fairfax City?**
+- **Expected answer:** Neighbors are loud past midnight ("beds shake"); management only enforces quiet hours (10pm–8am).
+- **System's actual response:**
+  > Residents describe neighbors being loud past midnight, to the point that "beds shake," and say little concrete action is taken [1]. Management can only enforce noise complaints during posted quiet hours (10pm–8am) [2].
+- **Retrieved (top-5):** eaves Fairfax City (all top-5)
+- **Accuracy judgment:** ✅ **Accurate**
+
+**Summary:** retrieval quality was *Relevant* and response accuracy *Accurate* for all 5 questions. A genuinely unanswerable, evaluative question is documented separately in **Failure Case Analysis** below.
+
+**Hybrid vs. semantic-only** (full table in `evaluation_results.md`): the retrievers diverge on Q1, Q2, and Q5. The clearest win is **Q5** — hybrid kept all five chunks on *eaves Fairfax City*, while semantic-only pulled in an unrelated *Fairfax Square* chunk, showing the BM25 component sharpening proper-noun queries.
 
 ## Failure Case Analysis
 
