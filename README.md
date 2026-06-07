@@ -6,7 +6,8 @@ listings — with **grounded, cited answers** and a refusal to guess when the so
 don't cover the question.
 
 > 🔗 **Live demo:**[ GMU_OffCampusHousing_ragPipeline_](https://gmuoffcampushousing.streamlit.app/)
-> 📸 _Screenshot/GIF: add `docs/demo.gif` and embed here_
+
+> 📸 _Screenshot/GIF:[ Demo_](https://github.com/github-pratik/GMU_Offcampushousing_ragpipeline_project/blob/main/documents/GMU_OffCampusHousing.gif)
 
 Ask *"Which complexes near GMU have pest problems?"* and get:
 > Layton Hall [1] (cockroaches, mice, bedbugs) and Oakton Park [2] ("absolutely infested with German cockroaches"). — with the source reviews one click away.
