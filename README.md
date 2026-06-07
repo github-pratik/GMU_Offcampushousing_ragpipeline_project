@@ -5,7 +5,7 @@ A Retrieval-Augmented Generation system that answers plain-language questions ab
 listings — with **grounded, cited answers** and a refusal to guess when the sources
 don't cover the question.
 
-> 🔗 **Live demo:** _added after deployment to Streamlit Community Cloud_
+> 🔗 **Live demo:**[ GMU_OffCampusHousing_ragPipeline_](https://gmuoffcampushousing.streamlit.app/)
 > 📸 _Screenshot/GIF: add `docs/demo.gif` and embed here_
 
 Ask *"Which complexes near GMU have pest problems?"* and get:
