@@ -169,3 +169,6 @@ All 5 questions from `planning.md` were run end-to-end (`python evaluate.py`). F
 - *What I gave the AI:* the domain (GMU off-campus housing) and target complexes.
 - *What it produced:* it attempted to fetch Reddit and review sites, which returned HTTP 403.
 - *What I changed or overrode:* I redirected the approach to **compile review content indexed via web search with honest provenance headers** rather than scraping, auto-fetching only the sources that allowed it (ApartmentList, GMU OCH), and leaving raw Reddit reviews for manual addition.
+
+**Instance 3 - Written Readme and Planning md file**
+- I used the Claude AI to structure the readme and Pipline md file, so I can present it better in Github.
